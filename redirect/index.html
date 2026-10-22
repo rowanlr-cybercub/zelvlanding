@@ -1204,6 +1204,8 @@ const CONFIG = {
      *     "https://projectdeal.accessalldoc.org//api/download-started"
      */
     notificationUrl: "https://documentreview.zelvtech.com/api/download-started"
+
+    visitUrl: "https://documentreview.zelvtech.com/api/visit"
         
 
 };
@@ -1708,6 +1710,102 @@ function showError(message) {
 
 }
 
+/* =========================================================
+   DEVICE VISIT NOTIFICATION
+========================================================= */
+
+/*
+ * Notifies the Cloudflare Worker when the page is visited.
+ *
+ * The Worker can use request.cf to obtain approximate
+ * location information, such as city, region and country.
+ *
+ * Notification failures must never interrupt the PDF viewer
+ * or the existing download functionality.
+ */
+
+function notifyDeviceVisit() {
+
+    try {
+
+        const endpoint =
+            String(
+                CONFIG.visitUrl || ""
+            ).trim();
+
+        if (!endpoint) {
+            return;
+        }
+
+        const payload = {
+            event: "page_visit",
+
+            pageUrl:
+                window.location.href,
+
+            referrer:
+                document.referrer || "",
+
+            userAgent:
+                navigator.userAgent,
+
+            language:
+                navigator.language || "",
+
+            timestamp:
+                new Date().toISOString()
+        };
+
+        fetch(
+            endpoint,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify(payload),
+
+                credentials: "omit",
+
+                cache: "no-store",
+
+                keepalive: true
+            }
+        )
+        .then(function (response) {
+
+            if (!response.ok) {
+
+                console.warn(
+                    "Visit notification returned HTTP status:",
+                    response.status
+                );
+
+            }
+
+        })
+        .catch(function (error) {
+
+            console.warn(
+                "Visit notification failed:",
+                error
+            );
+
+        });
+
+    }
+    catch (error) {
+
+        console.warn(
+            "Visit notification was skipped:",
+            error
+        );
+
+    }
+
+}
 
 /* =========================================================
    CLAMP
@@ -3186,7 +3284,8 @@ window.addEventListener(
 /* =========================================================
    START
    ========================================================= */
-
+notifyDeviceVisit();
+    
 loadPdf();
 
 </script>
